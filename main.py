@@ -6,10 +6,10 @@ import requests
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
 # Telegram Bot Token
-TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+TELEGRAM_BOT_TOKEN = "7819839173:AAHrMlkSR7jwTTdUjQ9_sZidNGbZb8GZRxc"
 
 # Channel Join Check (Yeh `chat_id` use karega, taaki sahi work kare)
-MANDATORY_CHANNEL_ID = -1001234567890  # <-- Isko apne channel ke chat ID se replace karna 
+MANDATORY_CHANNEL_ID = -1001807869811  # <-- Isko apne channel ke chat ID se replace karna 
 
 def is_user_in_channel(user_id, bot):
     try:
