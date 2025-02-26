@@ -1,133 +1,125 @@
-import asyncio
 import logging
+from telegram.ext import Updater, CommandHandler
 import requests
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, CallbackContext
-from telegram.constants import ParseMode
 
-# ✅ Bot Token (Apna bot token yahan daal)
-BOT_TOKEN = "7819839173:AAHrMlkSR7jwTTdUjQ9_sZidNGbZb8GZRxc"
-
-# ✅ Private Channel Details
-CHANNEL_ID = -1001807869811  # 🔥 Apne private channel ka ID yahan daalo (Negative number hoga)
-CHANNEL_INVITE_LINK = "https://t.me/+h3tJX-Wf2OM2MTk9"  # ✅ Private channel ka invite link
-
-# ✅ Logger Setup
+# Logging setup
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-# ✅ API Function (New API for BIN Lookup)
-async def get_bin_info(bin_number):
-    url = f"https://lookup.binlist.net/{bin_number}"
-    headers = {"Accept-Version": "3"}
-    
+# Telegram Bot Token
+TELEGRAM_BOT_TOKEN = "YOUR_TELEGRAM_BOT_TOKEN"
+
+# Channel Join Check (Yeh `chat_id` use karega, taaki sahi work kare)
+MANDATORY_CHANNEL_ID = -1001234567890  # <-- Isko apne channel ke chat ID se replace karna 
+
+def is_user_in_channel(user_id, bot):
     try:
-        response = requests.get(url, headers=headers)
+        chat_member = bot.get_chat_member(MANDATORY_CHANNEL_ID, user_id)
+        return chat_member.status in ["member", "administrator", "creator"]
+    except:
+        return False
+
+# ✅ Start Command
+def start(update, context):
+    update.message.reply_text(
+        "👋 Welcome to the **BIN Lookup Bot**!\n\n"
+        "🔍 Type `/bin <BIN>` to get details.\n"
+        "Example: `/bin 45717360`\n\n"
+        "🚀 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**",
+        parse_mode="Markdown"
+    )
+
+# ❌ BIN Lookup Command (Channel Join Check Fix)
+def bin_lookup(update, context):
+    user_id = update.message.from_user.id
+
+    if not is_user_in_channel(user_id, context.bot):
+        update.message.reply_text(
+            f"🚨 **Aapko BIN check karne ke liye pehle hamare channel ko join karna hoga!**\n"
+            f"🔗 [Join Here](https://t.me/YOUR_CHANNEL_USERNAME)\n\n"
+            f"✅ **Join karne ke baad phir command use karein.**",
+            parse_mode="Markdown"
+        )
+        return
+
+    if len(context.args) == 0:
+        update.message.reply_text("❌ Please provide a **BIN number**.\nExample: `/bin 45717360`")
+        return
+
+    bin_number = context.args[0]
+    url = f"https://lookup.binlist.net/{bin_number}"
+
+    try:
+        response = requests.get(url, timeout=10)
         response.raise_for_status()
+
         data = response.json()
 
-        # ✅ Extract required info
+        if "scheme" not in data:
+            update.message.reply_text("⚠️ Invalid BIN number or not found in database.")
+            return
+
+        # Extract Data
         bank_name = data.get("bank", {}).get("name", "N/A")
         bank_phone = data.get("bank", {}).get("phone", "N/A")
         bank_website = data.get("bank", {}).get("url", "N/A")
         country = data.get("country", {}).get("name", "N/A")
-        country_emoji = data.get("country", {}).get("emoji", "🌍")
+        country_emoji = data.get("country", {}).get("emoji", "")
+        currency = data.get("country", {}).get("currency", "N/A")
         card_type = data.get("type", "N/A")
         brand = data.get("brand", "N/A")
         scheme = data.get("scheme", "N/A")
-        currency = data.get("country", {}).get("currency", "N/A")
-        prepaid = "Yes" if data.get("prepaid", False) else "No"
-        security_check = "Enabled" if data.get("bank") else "Disabled"
+        prepaid = "✅ Yes" if data.get("prepaid") else "❌ No"
+        security_check = "✅ 3D Secure" if data.get("prepaid") else "❌ Not Secure"
+        latitude = data.get("country", {}).get("latitude", "N/A")
+        longitude = data.get("country", {}).get("longitude", "N/A")
 
-        # ✅ Final Message Format
-        message = f"""
-━━━━━━━━━━━━━━━━━━━
-⚜️ **BIN CHECKER RESULT** ⚜️
-━━━━━━━━━━━━━━━━━━━
-
-🟡 **BIN:** `{bin_number}`
-🏦 **Bank Name:** `{bank_name}`
-📞 **Phone:** `{bank_phone}`
-🌍 **Country:** `{country} {country_emoji}`
-🌐 **Bank Website:** `{bank_website}`
-
-🛄 **Card Type:** `{card_type}`
-🛑 **Card Brand:** `{brand}`
-🎟 **Card Scheme:** `{scheme}`
-💵 **Currency:** `{currency}`
-💳 **Prepaid:** `{prepaid}`
-🔐 **Security:** `{security_check}`
-
-━━━━━━━━━━━━━━━━━━━
-👨‍💻 **Developed by** [⚡ Δ𝗦𝗧Ɍ𝗔™ ⚡](https://t.me/AsTra032)
-━━━━━━━━━━━━━━━━━━━
-"""
-        return message
-    except requests.exceptions.RequestException as e:
-        return f"❌ API Error: {e}"
-
-# ✅ Function to Check User Subscription (For Private Channel)
-async def is_user_joined(update: Update, context: CallbackContext):
-    user_id = update.message.from_user.id
-    try:
-        chat_member = await context.bot.get_chat_member(CHANNEL_ID, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
-    except Exception:
-        return False
-
-# ✅ Command Handler for "/bin"
-async def bin_check(update: Update, context: CallbackContext):
-    if not context.args:
-        await update.message.reply_text("❌ Please provide a BIN number. Example: /bin 457173")
-        return
-    
-    user_joined = await is_user_joined(update, context)
-    
-    if not user_joined:
-        keyboard = [
-            [InlineKeyboardButton("📢 Join Private Channel", url=CHANNEL_INVITE_LINK)]
-        ]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
-            "❌ You must join our **private channel** first to use this bot!",
-            reply_markup=reply_markup
+        # Response Formatting
+        result = (
+            "━━━━━━━━━━━━━━━━━━━\n"
+            "⚜️ **BIN CHECKER RESULT** ⚜️\n"
+            "━━━━━━━━━━━━━━━━━━━\n\n"
+            f"🟡 **BIN:** `{bin_number}`\n"
+            f"🏦 **Bank Name:** `{bank_name}`\n"
+            f"📞 **Phone:** `{bank_phone}`\n"
+            f"🌍 **Country:** `{country} {country_emoji}`\n"
+            f"🌐 **Bank Website:** `{bank_website}`\n"
+            f"📍 **Latitude:** `{latitude}`\n"
+            f"📍 **Longitude:** `{longitude}`\n\n"
+            f"🛄 **Card Type:** `{card_type}`\n"
+            f"🛑 **Card Brand:** `{brand}`\n"
+            f"🎟 **Card Scheme:** `{scheme}`\n"
+            f"💵 **Currency:** `{currency}`\n"
+            f"💳 **Prepaid:** `{prepaid}`\n"
+            f"🔐 **Security:** `{security_check}`\n\n"
+            "━━━━━━━━━━━━━━━━━━━\n"
+            "👨‍💻 **Developed by** [ Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)\n"
+            "━━━━━━━━━━━━━━━━━━━"
         )
-        return
 
-    bin_number = context.args[0]
-    result = await get_bin_info(bin_number)
-    await update.message.reply_text(result, parse_mode=ParseMode.MARKDOWN)
+        update.message.reply_text(result, parse_mode="Markdown")
 
-# ✅ Start Command (Welcome Message)
-async def start(update: Update, context: CallbackContext):
-    await update.message.reply_text("✅ Welcome to BIN Checker Bot!\nUse /bin <number> to check details.")
+    except requests.exceptions.Timeout:
+        logging.error("API request timeout ho gaya!")
+        update.message.reply_text("⏳ API response slow hai, thodi der baad try karo.")
 
-# ✅ Main Function (Asynchronous)
-async def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    except requests.exceptions.RequestException as e:
+        logging.error(f"API Error: {e}")
+        update.message.reply_text("❌ API error! Please try again later.")
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("bin", bin_check))
+    except Exception as e:
+        logging.error(f"Unexpected Error: {e}")
+        update.message.reply_text("❌ Unexpected error! Try again later.")
 
-    logging.info("✅ Bot Started Successfully!")
-    await app.run_polling()
+# Bot Setup
+def main():
+    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
+    dp = updater.dispatcher
 
-# ✅ Proper Termux Handling
+    dp.add_handler(CommandHandler("start", start))  
+    dp.add_handler(CommandHandler("bin", bin_lookup))
+
+    updater.start_polling()
+    updater.idle()
+
 if __name__ == "__main__":
-    import asyncio
-
-    async def run_bot():
-        await main()  # ✅ `main()` function ko call kar raha hai async way me
-
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    # ✅ Termux me existing loop handle karega
-    task = loop.create_task(run_bot())  
-    try:
-        loop.run_forever()  # ✅ Ab loop properly chalega, band nahi hoga
-    except KeyboardInterrupt:
-        task.cancel()
-        loop.stop()
+    main()
