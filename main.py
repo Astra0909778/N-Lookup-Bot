@@ -1,13 +1,13 @@
-from telegram import Update
+from telegram import Update, ParseMode
 from telegram.ext import Updater, CommandHandler, CallbackContext
 from telegram.error import BadRequest
 import requests
 
-# 🔥 Replace your Bot Token here
-BOT_TOKEN = "7819839173:AAHrMlkSR7jwTTdUjQ9_sZidNGbZb8GZRxc"
+# 🔥 Replace with your Bot Token
+BOT_TOKEN = "7518220550:AAGnnmTxA9hJBDBf6QO7WfaeEB8t6k4p_dw"
 
-# 🔥 Replace your Telegram Channel ID here (-100xxxxxxxxxx format)
-CHANNEL_ID = -1001807869811
+# 🔥 Replace with your correct Channel ID
+CHANNEL_ID = -1001807869811  # Apna sahi channel ID yahan daalo
 
 # ✅ Function to check if user has joined the channel
 def check_membership(user_id, context):
@@ -17,27 +17,35 @@ def check_membership(user_id, context):
     except BadRequest:
         return False
 
-# ✅ Start Command
+# ✅ Start Command - Welcome Message & Channel Check
 def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
-    first_name = update.message.from_user.first_name
 
     if check_membership(user_id, context):
-        update.message.reply_text(f"👋 Hello {first_name}! Welcome to the bot.\nUse /bin <bin_number> to check BIN info.")
+        update.message.reply_text("👋 Welcome! ✅ You have joined the channel. Use `/bin <bin_number>` to check BIN details.")
     else:
-        update.message.reply_text("❌ Pehle is channel ko join karo: https://t.me/+h3tJX-Wf2OM2MTk9")
+        update.message.reply_text(
+            "❌ 𝗝𝗼𝗶𝗻 𝗳𝗶𝗿𝘀𝘁 𝗰𝗵𝗮𝗻𝗻𝗲𝗹: [JOIN NOW](https://t.me/+h3tJX-Wf2OM2MTk9)\n"
+            "🔄 Phir `/start` command dobara use karo!",
+            parse_mode=ParseMode.MARKDOWN
+        )
 
-# ✅ BIN Checker Function
+# ✅ BIN Checker Function - Channel Link Show Nahi Hoga
 def bin_check(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
 
-    # Channel Join Check
+    # Pehle check karega ki user ne channel join kiya hai ya nahi
     if not check_membership(user_id, context):
-        update.message.reply_text("❌ Pehle is channel ko join karo: https://t.me/+h3tJX-Wf2OM2MTk9")
+        update.message.reply_text(
+            "❌ Aapne abhi tak channel join nahi kiya!\n"
+            "🔹 Pehle join karein: [JOIN NOW](https://t.me/+h3tJX-Wf2OM2MTk9)\n"
+            "🔄 Phir `/bin` command try karein!",
+            parse_mode=ParseMode.MARKDOWN
+        )
         return
 
     if len(context.args) == 0:
-        update.message.reply_text("❌ Please provide a BIN number. Example: /bin 457173")
+        update.message.reply_text("❌ Please provide a BIN number. Example: `/bin 457173`")
         return
 
     bin_number = context.args[0]
@@ -54,39 +62,43 @@ def bin_check(update: Update, context: CallbackContext):
             bank_phone = data.get("bank", {}).get("phone", "N/A")
             bank_website = data.get("bank", {}).get("url", "N/A")
             country = data.get("country", {}).get("name", "N/A")
-            country_emoji = data.get("country", {}).get("emoji", "🏳")
+            country_emoji = data.get("country", {}).get("emoji", "🌍")
             scheme = data.get("scheme", "N/A")
             card_type = data.get("type", "N/A")
             brand = data.get("brand", "N/A")
             currency = data.get("country", {}).get("currency", "N/A")
-            latitude = data.get("country", {}).get("latitude", "N/A")
-            longitude = data.get("country", {}).get("longitude", "N/A")
             prepaid = "✅ Yes" if data.get("prepaid", False) else "❌ No"
 
             # 3D Secure (VBV/MSC) & 2D Secure (Non-VBV) Check
             if card_type.lower() == "debit":
-                security_check = "❌ **2D Secure (Non-VBV)**"
+                security_check = "❌ **Non-3D Secure (2D)** 🔓"
             else:
-                security_check = "✅ **3D Secure (VBV/MSC)**"
+                security_check = "✅ **3D Secure (VBV/MSC)** 🔒"
 
-            message = f"""🔍 **BIN Lookup**
-💳 **BIN:** `{bin_number}`
-🏦 **Bank:** `{bank_name}`
-📞 **Bank Phone:** `{bank_phone}`
-🌐 **Bank Website:** `{bank_website}`
+            message = f"""
+━━━━━━━━━━━━━━━━━━━
+⚜️ **BIN CHECKER RESULT** ⚜️
+━━━━━━━━━━━━━━━━━━━
+
+🟡 **BIN:** `{bin_number}`
+🏦 **Bank Name:** `{bank_name}`
+📞 **Phone:** `{bank_phone}`
 🌍 **Country:** `{country} {country_emoji}`
-📍 **Latitude:** `{latitude}`
-📍 **Longitude:** `{longitude}`
-🏷 **Scheme:** `{scheme}`
-📌 **Brand:** `{brand}`
-🔹 **Type:** `{card_type}`
-💰 **Currency:** `{currency}`
+🌐 **Bank Website:** `{bank_website}`
+
+🛄 **Card Type:** `{card_type}`
+🛑 **Card Brand:** `{brand}`
+🎟 **Card Scheme:** `{scheme}`
+💵 **Currency:** `{currency}`
 💳 **Prepaid:** `{prepaid}`
-🔒 **Security:** `{security_check}`
+🔐 **Security:** `{security_check}`
 
-👁 Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)"""
+━━━━━━━━━━━━━━━━━━━
+👨‍💻 **Developed by** [⚡ Δ𝗦𝗧Ɍ𝗔™ ⚡](https://t.me/AsTra032)
+━━━━━━━━━━━━━━━━━━━
+"""
 
-            update.message.reply_text(message, parse_mode="Markdown")
+            update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
         else:
             update.message.reply_text("❌ Invalid BIN or API error.")
     except Exception as e:
