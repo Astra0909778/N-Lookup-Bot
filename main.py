@@ -7,7 +7,7 @@ import requests
 BOT_TOKEN = "7819839173:AAHrMlkSR7jwTTdUjQ9_sZidNGbZb8GZRxc"
 
 # 🔥 Replace your Telegram Channel ID here (-100xxxxxxxxxx format)
-CHANNEL_ID = -1807869811
+CHANNEL_ID = -1001807869811
 
 # ✅ Function to check if user has joined the channel
 def check_membership(user_id, context):
