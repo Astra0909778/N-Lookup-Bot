@@ -1,42 +1,47 @@
-from telegram import Update, ParseMode
-from telegram.ext import Updater, CommandHandler, CallbackContext
-from telegram.error import BadRequest
+import asyncio
+import logging
 import requests
+from telegram import Update, Bot
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackContext
+from telegram.constants import ParseMode
+from telegram.error import BadRequest
 
-# 🔥 Replace with your Bot Token
+# 🔥 Bot Token & Channel ID (Change as needed)
 BOT_TOKEN = "7518220550:AAGnnmTxA9hJBDBf6QO7WfaeEB8t6k4p_dw"
+CHANNEL_ID = -1001807869811  # ✅ Apne channel ki ID yahan daalo
 
-# 🔥 Replace with your correct Channel ID
-CHANNEL_ID = -1001807869811  # Apna sahi channel ID yahan daalo
+# ✅ Logger Setup
+logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
 
-# ✅ Function to check if user has joined the channel
-def check_membership(user_id, context):
+# ✅ Function to check if user is in the channel
+async def check_membership(user_id, bot: Bot):
     try:
-        member = context.bot.get_chat_member(CHANNEL_ID, user_id)
+        member = await bot.get_chat_member(CHANNEL_ID, user_id)
         return member.status in ["member", "administrator", "creator"]
     except BadRequest:
         return False
 
-# ✅ Start Command - Welcome Message & Channel Check
-def start(update: Update, context: CallbackContext):
+# ✅ /start Command - Welcome & Check Membership
+async def start(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
+    bot = context.bot
 
-    if check_membership(user_id, context):
-        update.message.reply_text("👋 Welcome! ✅ You have joined the channel. Use `/bin <bin_number>` to check BIN details.")
+    if await check_membership(user_id, bot):
+        await update.message.reply_text("👋 Welcome! ✅ Aapne channel join kar liya hai.\nUse `/bin <bin_number>` to check BIN details.")
     else:
-        update.message.reply_text(
+        await update.message.reply_text(
             "❌ 𝗝𝗼𝗶𝗻 𝗳𝗶𝗿𝘀𝘁 𝗰𝗵𝗮𝗻𝗻𝗲𝗹: [JOIN NOW](https://t.me/+h3tJX-Wf2OM2MTk9)\n"
             "🔄 Phir `/start` command dobara use karo!",
             parse_mode=ParseMode.MARKDOWN
         )
 
-# ✅ BIN Checker Function - Channel Link Show Nahi Hoga
-def bin_check(update: Update, context: CallbackContext):
+# ✅ BIN Checker - No Channel Link if Already Joined
+async def bin_check(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
+    bot = context.bot
 
-    # Pehle check karega ki user ne channel join kiya hai ya nahi
-    if not check_membership(user_id, context):
-        update.message.reply_text(
+    if not await check_membership(user_id, bot):
+        await update.message.reply_text(
             "❌ Aapne abhi tak channel join nahi kiya!\n"
             "🔹 Pehle join karein: [JOIN NOW](https://t.me/+h3tJX-Wf2OM2MTk9)\n"
             "🔄 Phir `/bin` command try karein!",
@@ -45,12 +50,11 @@ def bin_check(update: Update, context: CallbackContext):
         return
 
     if len(context.args) == 0:
-        update.message.reply_text("❌ Please provide a BIN number. Example: `/bin 457173`")
+        await update.message.reply_text("❌ Please provide a BIN number. Example: `/bin 457173`")
         return
 
     bin_number = context.args[0]
     url = f"https://lookup.binlist.net/{bin_number}"
-
     headers = {"Accept-Version": "3"}
 
     try:
@@ -69,11 +73,8 @@ def bin_check(update: Update, context: CallbackContext):
             currency = data.get("country", {}).get("currency", "N/A")
             prepaid = "✅ Yes" if data.get("prepaid", False) else "❌ No"
 
-            # 3D Secure (VBV/MSC) & 2D Secure (Non-VBV) Check
-            if card_type.lower() == "debit":
-                security_check = "❌ **Non-3D Secure (2D)** 🔓"
-            else:
-                security_check = "✅ **3D Secure (VBV/MSC)** 🔒"
+            # 🔐 3D Secure (VBV/MSC) & 2D Secure (Non-VBV)
+            security_check = "✅ **3D Secure (VBV/MSC)** 🔒" if card_type.lower() == "credit" else "❌ **Non-3D Secure (2D)** 🔓"
 
             message = f"""
 ━━━━━━━━━━━━━━━━━━━
@@ -97,23 +98,21 @@ def bin_check(update: Update, context: CallbackContext):
 👨‍💻 **Developed by** [⚡ Δ𝗦𝗧Ɍ𝗔™ ⚡](https://t.me/AsTra032)
 ━━━━━━━━━━━━━━━━━━━
 """
-
-            update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
+            await update.message.reply_text(message, parse_mode=ParseMode.MARKDOWN)
         else:
-            update.message.reply_text("❌ Invalid BIN or API error.")
+            await update.message.reply_text("❌ Invalid BIN or API error.")
     except Exception as e:
-        update.message.reply_text("❌ Error fetching BIN data.")
+        await update.message.reply_text(f"❌ Error fetching BIN data: {e}")
 
-# ✅ Main Function
-def main():
-    updater = Updater(BOT_TOKEN, use_context=True)
-    dp = updater.dispatcher
+# ✅ Main Function (Asynchronous)
+async def main():
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    dp.add_handler(CommandHandler("start", start))
-    dp.add_handler(CommandHandler("bin", bin_check, pass_args=True))
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("bin", bin_check))
 
-    updater.start_polling()
-    updater.idle()
+    logging.info("✅ Bot Started Successfully!")
+    await app.run_polling()
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
