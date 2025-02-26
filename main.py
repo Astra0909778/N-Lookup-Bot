@@ -1,96 +1,104 @@
-import logging
-from telegram.ext import Updater, CommandHandler
+from telegram import Update
+from telegram.ext import Updater, CommandHandler, CallbackContext
+from telegram.error import BadRequest
 import requests
 
-# Logging setup
-logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
+# 🔥 Replace your Bot Token here
+BOT_TOKEN = "7819839173:AAHrMlkSR7jwTTdUjQ9_sZidNGbZb8GZRxc"
 
-# Telegram Bot Token
-TELEGRAM_BOT_TOKEN = "7819839173:AAHrMlkSR7jwTTdUjQ9_sZidNGbZb8GZRxc"
+# 🔥 Replace your Telegram Channel ID here (-100xxxxxxxxxx format)
+CHANNEL_ID = -1807869811
 
-# Channel Join Check
-MANDATORY_CHANNEL = "@h3tJX_Wf2OM2MTk9"
-
-def is_user_in_channel(user_id, bot):
+# ✅ Function to check if user has joined the channel
+def check_membership(user_id, context):
     try:
-        chat_member = bot.get_chat_member(MANDATORY_CHANNEL, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
-    except:
+        member = context.bot.get_chat_member(CHANNEL_ID, user_id)
+        return member.status in ["member", "administrator", "creator"]
+    except BadRequest:
         return False
 
-# ✅ Start Command (Yeh hamesha chalega)
-def start(update, context):
-    update.message.reply_text(
-        "👋 Welcome to the **BIN Lookup Bot**!\n\n"
-        "🔍 Type `/bin <BIN>` to get details.\n"
-        "Example: `/bin 45717360`\n\n"
-        "🚀 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**",
-        parse_mode="Markdown"
-    )
+# ✅ Start Command
+def start(update: Update, context: CallbackContext):
+    user_id = update.message.from_user.id
+    first_name = update.message.from_user.first_name
 
-# ❌ BIN Lookup Command (Yeh tab tak kaam nahi karega jab tak user channel join na kare)
-def bin_lookup(update, context):
+    if check_membership(user_id, context):
+        update.message.reply_text(f"👋 Hello {first_name}! Welcome to the bot.\nUse /bin <bin_number> to check BIN info.")
+    else:
+        update.message.reply_text("❌ Pehle is channel ko join karo: https://t.me/+h3tJX-Wf2OM2MTk9")
+
+# ✅ BIN Checker Function
+def bin_check(update: Update, context: CallbackContext):
     user_id = update.message.from_user.id
 
-    if not is_user_in_channel(user_id, context.bot):
-        update.message.reply_text(
-            f"🚨 **Aapko BIN check karne ke liye pehle hamare channel ko join karna hoga!**\n"
-            f"🔗 [Join Here](https://t.me/+h3tJX-Wf2OM2MTk9)\n\n"
-            f"✅ **Join karne ke baad phir command use karein.**",
-            parse_mode="Markdown"
-        )
+    # Channel Join Check
+    if not check_membership(user_id, context):
+        update.message.reply_text("❌ Pehle is channel ko join karo: https://t.me/+h3tJX-Wf2OM2MTk9")
         return
 
     if len(context.args) == 0:
-        update.message.reply_text("❌ Please provide a **BIN number**.\nExample: `/bin 45717360`")
+        update.message.reply_text("❌ Please provide a BIN number. Example: /bin 457173")
         return
 
     bin_number = context.args[0]
     url = f"https://lookup.binlist.net/{bin_number}"
 
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
+    headers = {"Accept-Version": "3"}
 
+    try:
+        response = requests.get(url, headers=headers)
         data = response.json()
 
-        if "scheme" not in data:
-            update.message.reply_text("⚠️ Invalid BIN number or not found in database.")
-            return
+        if response.status_code == 200:
+            bank_name = data.get("bank", {}).get("name", "N/A")
+            bank_phone = data.get("bank", {}).get("phone", "N/A")
+            bank_website = data.get("bank", {}).get("url", "N/A")
+            country = data.get("country", {}).get("name", "N/A")
+            country_emoji = data.get("country", {}).get("emoji", "🏳")
+            scheme = data.get("scheme", "N/A")
+            card_type = data.get("type", "N/A")
+            brand = data.get("brand", "N/A")
+            currency = data.get("country", {}).get("currency", "N/A")
+            latitude = data.get("country", {}).get("latitude", "N/A")
+            longitude = data.get("country", {}).get("longitude", "N/A")
+            prepaid = "✅ Yes" if data.get("prepaid", False) else "❌ No"
 
-        # Response Formatting
-        result = f"💳 **BIN Lookup Result**\n\n"
-        result += f"🏦 **Scheme:** {data.get('scheme', 'N/A')}\n"
-        result += f"💳 **Type:** {data.get('type', 'N/A')}\n"
-        result += f"🏢 **Brand:** {data.get('brand', 'N/A')}\n"
-        result += f"🏦 **Bank:** {data.get('bank', {}).get('name', 'N/A')}\n"
-        result += f"📍 **Country:** {data.get('country', {}).get('name', 'N/A')} {data.get('country', {}).get('emoji', '')}\n"
-        result += f"🌎 **Currency:** {data.get('country', {}).get('currency', 'N/A')}\n"
-        result += f"📞 **Bank Contact:** {data.get('bank', {}).get('phone', 'N/A')}\n"
-        result += f"🌐 **Bank Website:** {data.get('bank', {}).get('url', 'N/A')}\n\n"
-        result += "🚀 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**"
+            # 3D Secure (VBV/MSC) & 2D Secure (Non-VBV) Check
+            if card_type.lower() == "debit":
+                security_check = "❌ **2D Secure (Non-VBV)**"
+            else:
+                security_check = "✅ **3D Secure (VBV/MSC)**"
 
-        update.message.reply_text(result, parse_mode="Markdown")
+            message = f"""🔍 **BIN Lookup**
+💳 **BIN:** `{bin_number}`
+🏦 **Bank:** `{bank_name}`
+📞 **Bank Phone:** `{bank_phone}`
+🌐 **Bank Website:** `{bank_website}`
+🌍 **Country:** `{country} {country_emoji}`
+📍 **Latitude:** `{latitude}`
+📍 **Longitude:** `{longitude}`
+🏷 **Scheme:** `{scheme}`
+📌 **Brand:** `{brand}`
+🔹 **Type:** `{card_type}`
+💰 **Currency:** `{currency}`
+💳 **Prepaid:** `{prepaid}`
+🔒 **Security:** `{security_check}`
 
-    except requests.exceptions.Timeout:
-        logging.error("API request timeout ho gaya!")
-        update.message.reply_text("⏳ API response slow hai, thodi der baad try karo.")
+👁 Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)"""
 
-    except requests.exceptions.RequestException as e:
-        logging.error(f"API Error: {e}")
-        update.message.reply_text("❌ API error! Please try again later.")
-
+            update.message.reply_text(message, parse_mode="Markdown")
+        else:
+            update.message.reply_text("❌ Invalid BIN or API error.")
     except Exception as e:
-        logging.error(f"Unexpected Error: {e}")
-        update.message.reply_text("❌ Unexpected error! Try again later.")
+        update.message.reply_text("❌ Error fetching BIN data.")
 
-# Bot Setup
+# ✅ Main Function
 def main():
-    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
+    updater = Updater(BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler("start", start))  
-    dp.add_handler(CommandHandler("bin", bin_lookup))
+    dp.add_handler(CommandHandler("start", start))
+    dp.add_handler(CommandHandler("bin", bin_check, pass_args=True))
 
     updater.start_polling()
     updater.idle()
