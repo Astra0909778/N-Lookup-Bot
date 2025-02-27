@@ -106,11 +106,11 @@ def generate_cards(update: Update, context: CallbackContext) -> None:
 
         cards = []
         for _ in range(10):
-            card_number = bin_number + "".join(str(random.randint(0, 9)) for _ in range(16 - len(bin_number)))
-            exp_month = str(random.randint(1, 12)).zfill(2)
-            exp_year = str(random.randint(2026, 2035))
-            cvv = str(random.randint(100, 999))
-        cards.append(f"{card_number}|{exp_month}|{exp_year}|{cvv}")
+    card_number = bin_number + "".join(str(random.randint(0, 9)) for _ in range(16 - len(bin_number)))
+    exp_month = str(random.randint(1, 12)).zfill(2)
+    exp_year = str(random.randint(2026, 2035))
+    cvv = str(random.randint(100, 999))
+    cards.append(f"{card_number}|{exp_month}|{exp_year}|{cvv}")  # ✅ Ab sahi jagah hai
 
         result = (
             "🟢 **LIVE Credit Cards:** 🟢\n"
