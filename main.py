@@ -110,13 +110,13 @@ def generate_cards(update: Update, context: CallbackContext) -> None:
             exp_month = str(random.randint(1, 12)).zfill(2)
             exp_year = str(random.randint(2026, 2035))
             cvv = str(random.randint(100, 999))
-            cards.append(f"{card_number}|{exp_month}|{exp_year}|{cvv}")
+        cards.append(f"{card_number}|{exp_month}|{exp_year}|{cvv}")
 
         result = (
             "🟢 **LIVE Credit Cards:** 🟢\n"
             "━━━━━━━━━━━━━━━━━━━\n"
-            + "\n".join(cards) +
-            "\n━━━━━━━━━━━━━━━━━━━\n"
+            f"```{chr(10).join(cards)}```\n"
+            "━━━━━━━━━━━━━━━━━━━\n"
             f"**BIN:** `{bin_number}`\n"
             f"**Scheme:** `{scheme}`\n"
             f"**Type:** `{card_type}`\n"
@@ -131,20 +131,76 @@ def generate_cards(update: Update, context: CallbackContext) -> None:
 
     update.message.reply_text(result, parse_mode="Markdown")
 
-# Fake Address Generator
+# 📌 Real Cities & ZIP Codes for Different Countries
+REAL_LOCATIONS = {
+    "India": {
+        "Maharashtra": {"city": "Sahada", "zip": "425444"},
+        "Delhi": {"city": "New Delhi", "zip": "110001"},
+        "Karnataka": {"city": "Bangalore", "zip": "560001"},
+        "West Bengal": {"city": "Kolkata", "zip": "700001"},
+        "Tamil Nadu": {"city": "Chennai", "zip": "600001"},
+    },
+    "USA": {
+        "New York": {"city": "New York", "zip": "10080"},
+        "California": {"city": "Los Angeles", "zip": "90001"},
+        "Texas": {"city": "Houston", "zip": "77001"},
+        "Florida": {"city": "Miami", "zip": "33101"},
+        "Illinois": {"city": "Chicago", "zip": "60601"},
+    },
+    "UK": {
+        "England": {"city": "London", "zip": "EC1A 1BB"},
+        "Scotland": {"city": "Edinburgh", "zip": "EH1 1YZ"},
+        "Wales": {"city": "Cardiff", "zip": "CF10 1AA"},
+    },
+    "Canada": {
+        "Ontario": {"city": "Toronto", "zip": "M5H 2N2"},
+        "Quebec": {"city": "Montreal", "zip": "H2Y 1C6"},
+        "British Columbia": {"city": "Vancouver", "zip": "V6B 3K9"},
+    },
+    "Australia": {
+        "New South Wales": {"city": "Sydney", "zip": "2000"},
+        "Victoria": {"city": "Melbourne", "zip": "3000"},
+        "Queensland": {"city": "Brisbane", "zip": "4000"},
+    },
+    "Germany": {
+        "Bavaria": {"city": "Munich", "zip": "80331"},
+        "Berlin": {"city": "Berlin", "zip": "10115"},
+        "Hesse": {"city": "Frankfurt", "zip": "60311"},
+    },
+}
+
+# 📌 Country Code Mapping for Phone Numbers
+COUNTRY_CODES = {
+    "India": "+91",
+    "USA": "+1",
+    "UK": "+44",
+    "Canada": "+1",
+    "Australia": "+61",
+    "Germany": "+49",
+}
+
+# 📌 Generate Fake Address (with Real City & ZIP)
 def fake_address(update: Update, context: CallbackContext) -> None:
     if len(context.args) < 2:
-        update.message.reply_text("❌ Usage: /fake <Country> <State>")
+        update.message.reply_text("❌ Usage: /fake <Country> <State>\nExample: `/fake USA New York`")
         return
     
     country = context.args[0].capitalize()
     state = " ".join(context.args[1:]).capitalize()
 
-    # Random fake details
-    street = f"{random.randint(100, 9999)} {random.choice(['Main St', 'Park Ave', 'Elm St', 'Maple Dr'])}"
-    city = random.choice(["Los Angeles", "New York", "Houston", "Chicago"])
-    zip_code = str(random.randint(10000, 99999))
-    phone = f"+{random.randint(1, 99)} {random.randint(1000000000, 9999999999)}"
+    # Agar country aur state ka real data available hai toh wahi use hoga
+    if country in REAL_LOCATIONS and state in REAL_LOCATIONS[country]:
+        city = REAL_LOCATIONS[country][state]["city"]
+        zip_code = REAL_LOCATIONS[country][state]["zip"]
+    else:
+        city = "Random City"
+        zip_code = str(random.randint(10000, 99999))
+
+    # Generate Random Street & Phone Number
+    street = f"{random.randint(100, 9999)} {random.choice(['Maple Dr', 'Elm St', 'Park Ave', 'Broadway'])}"
+    phone_code = COUNTRY_CODES.get(country, "+999")  # Default unknown country code
+    phone = f"{phone_code} {random.randint(6000000000, 9999999999)}"
+    flag = {"India": "🇮🇳", "USA": "🇺🇸", "UK": "🇬🇧", "Canada": "🇨🇦", "Australia": "🇦🇺", "Germany": "🇩🇪"}.get(country, "🏳️")
 
     result = (
         "📍 **Generated Fake Address:**\n"
@@ -154,11 +210,19 @@ def fake_address(update: Update, context: CallbackContext) -> None:
         f"🌍 **State:** `{state}`\n"
         f"📮 **ZIP Code:** `{zip_code}`\n"
         f"📞 **Phone:** `{phone}`\n"
-        f"🇨🇴 **Country:** `{country}`\n"
-        "━━━━━━━━━━━━━━━━━━━\n"
-        f"👨‍💻 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️]**"
+        f"🏳️ **Country:** `{country} {flag}`\n"
+        "━━━━━━━━━━━━━━━━━━━"
     )
     update.message.reply_text(result, parse_mode="Markdown")
+
+# Bot Setup
+updater = Updater(BOT_TOKEN)
+dp = updater.dispatcher
+
+dp.add_handler(CommandHandler("fake", fake_address))
+
+updater.start_polling()
+updater.idle()
 
 # Bot Setup
 updater = Updater(BOT_TOKEN)
