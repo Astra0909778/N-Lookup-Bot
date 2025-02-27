@@ -35,7 +35,7 @@ def bin_lookup(update, context):
     if not is_user_in_channel(user_id, context.bot):
         update.message.reply_text(
             f"🚨 **Aapko BIN check karne ke liye pehle hamare channel ko join karna hoga!**\n"
-            f"🔗 [Join Here](https://t.me/YOUR_CHANNEL_USERNAME)\n\n"
+            f"🔗 [Join Here](https://t.me/+h3tJX-Wf2OM2MTk9)\n\n"
             f"✅ **Join karne ke baad phir command use karein.**",
             parse_mode="Markdown"
         )
