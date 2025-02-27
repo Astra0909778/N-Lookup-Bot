@@ -23,7 +23,7 @@ def start(update, context):
         "📌 `/help` - View all commands\n"
         "━━━━━━━━━━━━━━━━━━━\n"
         f"📢 **Join Our Channel for Updates!**\n"
-        f"🔗 [Join Here]({https://t.me/+h3tJX-Wf2OM2MTk9})\n"
+        f"🔗 [Join Here]({})\n"
         "*(Joining is optional, but recommended!)*\n"
         "━━━━━━━━━━━━━━━━━━━\n"
         "👨‍💻 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**\n"
