@@ -23,7 +23,7 @@ def start(update, context):
         "📌 `/help` - View all commands\n"
         "━━━━━━━━━━━━━━━━━━━\n"
         f"📢 **Join Our Channel for Updates!**\n"
-        f"🔗 [Join Here]({})\n"
+        f"🔗 [Join Here]({CHANNEL_LINK})\n"
         "*(Joining is optional, but recommended!)*\n"
         "━━━━━━━━━━━━━━━━━━━\n"
         "👨‍💻 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**\n"
@@ -116,7 +116,7 @@ def generate_cc(update, context):
 
     # Response Formatting
     result = (
-        "💳 **Live Credit Card** 💳\n"
+        "🟢 💳 **Fake Credit Cards Generated:** 💳 🟢\n"
         "━━━━━━━━━━━━━━━━━━━\n"
         + "\n".join(cards) +
         "\n━━━━━━━━━━━━━━━━━━━\n"
