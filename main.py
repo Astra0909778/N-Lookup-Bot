@@ -1,6 +1,7 @@
 import logging
-from telegram.ext import Updater, CommandHandler
+import random
 import requests
+from telegram.ext import Updater, CommandHandler
 
 # Logging setup
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=logging.INFO)
@@ -8,39 +9,30 @@ logging.basicConfig(format="%(asctime)s - %(levelname)s - %(message)s", level=lo
 # Telegram Bot Token
 TELEGRAM_BOT_TOKEN = "7819839173:AAHrMlkSR7jwTTdUjQ9_sZidNGbZb8GZRxc"
 
-# Channel Join Check (Yeh `chat_id` use karega, taaki sahi work kare)
-MANDATORY_CHANNEL_ID = -1001807869811  # <-- Isko apne channel ke chat ID se replace karna 
+# Channel Invite Link (Optional)
+CHANNEL_LINK = "https://t.me/+h3tJX-Wf2OM2MTk9"
 
-def is_user_in_channel(user_id, bot):
-    try:
-        chat_member = bot.get_chat_member(MANDATORY_CHANNEL_ID, user_id)
-        return chat_member.status in ["member", "administrator", "creator"]
-    except:
-        return False
-
-# ✅ Start Command
+# Start Command
 def start(update, context):
     update.message.reply_text(
-        "👋 Welcome to the **BIN Lookup Bot**!\n\n"
-        "🔍 Type `/bin <BIN>` to get details.\n"
-        "Example: `/bin 45717360`\n\n"
-        "🚀 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**",
+        f"👋 **Welcome to the BIN & CC Generator Bot!**\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
+        "🔍 **Commands:**\n"
+        "📌 `/bin <BIN>` - Check BIN information\n"
+        "📌 `/gen <BIN>` - Generate fake credit cards\n"
+        "📌 `/help` - View all commands\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
+        f"📢 **Join Our Channel for Updates!**\n"
+        f"🔗 [Join Here]({https://t.me/+h3tJX-Wf2OM2MTk9})\n"
+        "*(Joining is optional, but recommended!)*\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
+        "👨‍💻 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**\n"
+        "━━━━━━━━━━━━━━━━━━━",
         parse_mode="Markdown"
     )
 
-# ❌ BIN Lookup Command (Channel Join Check Fix)
+# BIN Lookup Command
 def bin_lookup(update, context):
-    user_id = update.message.from_user.id
-
-    if not is_user_in_channel(user_id, context.bot):
-        update.message.reply_text(
-            f"🚨 **Aapko BIN check karne ke liye pehle hamare channel ko join karna hoga!**\n"
-            f"🔗 [Join Here](https://t.me/+h3tJX-Wf2OM2MTk9)\n\n"
-            f"✅ **Join karne ke baad phir command use karein.**",
-            parse_mode="Markdown"
-        )
-        return
-
     if len(context.args) == 0:
         update.message.reply_text("❌ Please provide a **BIN number**.\nExample: `/bin 45717360`")
         return
@@ -51,7 +43,6 @@ def bin_lookup(update, context):
     try:
         response = requests.get(url, timeout=10)
         response.raise_for_status()
-
         data = response.json()
 
         if "scheme" not in data:
@@ -60,8 +51,6 @@ def bin_lookup(update, context):
 
         # Extract Data
         bank_name = data.get("bank", {}).get("name", "N/A")
-        bank_phone = data.get("bank", {}).get("phone", "N/A")
-        bank_website = data.get("bank", {}).get("url", "N/A")
         country = data.get("country", {}).get("name", "N/A")
         country_emoji = data.get("country", {}).get("emoji", "")
         currency = data.get("country", {}).get("currency", "N/A")
@@ -80,9 +69,7 @@ def bin_lookup(update, context):
             "━━━━━━━━━━━━━━━━━━━\n\n"
             f"🟡 **BIN:** `{bin_number}`\n"
             f"🏦 **Bank Name:** `{bank_name}`\n"
-            f"📞 **Phone:** `{bank_phone}`\n"
             f"🌍 **Country:** `{country} {country_emoji}`\n"
-            f"🌐 **Bank Website:** `{bank_website}`\n"
             f"📍 **Latitude:** `{latitude}`\n"
             f"📍 **Longitude:** `{longitude}`\n\n"
             f"🛄 **Card Type:** `{card_type}`\n"
@@ -92,31 +79,81 @@ def bin_lookup(update, context):
             f"💳 **Prepaid:** `{prepaid}`\n"
             f"🔐 **Security:** `{security_check}`\n\n"
             "━━━━━━━━━━━━━━━━━━━\n"
-            "👨‍💻 **Developed by** [ Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)\n"
+            "👨‍💻 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**\n"
             "━━━━━━━━━━━━━━━━━━━"
         )
-
         update.message.reply_text(result, parse_mode="Markdown")
-
-    except requests.exceptions.Timeout:
-        logging.error("API request timeout ho gaya!")
-        update.message.reply_text("⏳ API response slow hai, thodi der baad try karo.")
 
     except requests.exceptions.RequestException as e:
         logging.error(f"API Error: {e}")
         update.message.reply_text("❌ API error! Please try again later.")
 
-    except Exception as e:
-        logging.error(f"Unexpected Error: {e}")
-        update.message.reply_text("❌ Unexpected error! Try again later.")
+# Fake Credit Card Generator
+def generate_cc(update, context):
+    if len(context.args) == 0:
+        update.message.reply_text("❌ Please provide a **BIN number**.\nExample: `/gen 45717360`")
+        return
+
+    bin_number = context.args[0]
+
+    # Generate 10 random credit card numbers
+    cards = []
+    for _ in range(10):
+        card_number = bin_number + "".join(str(random.randint(0, 9)) for _ in range(16 - len(bin_number)))
+        exp_month = str(random.randint(1, 12)).zfill(2)
+        exp_year = str(random.randint(2026, 2035))
+        cvv = str(random.randint(100, 999))
+        cards.append(f"{card_number}|{exp_month}|{exp_year}|{cvv}")
+
+    # Fake BIN Information
+    bin_info = {
+        "scheme": "VISA",
+        "type": "CREDIT",
+        "brand": "VISA TRADITIONAL",
+        "bank": "JPMorgan Chase Bank N.A.",
+        "country": "United States of America 🇺🇸"
+    }
+
+    # Response Formatting
+    result = (
+        "💳 **Live Credit Card** 💳\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
+        + "\n".join(cards) +
+        "\n━━━━━━━━━━━━━━━━━━━\n"
+        f"**BIN:** `{bin_number}`\n"
+        f"**Scheme:** `{bin_info['scheme']}`\n"
+        f"**Type:** `{bin_info['type']}`\n"
+        f"**Brand:** `{bin_info['brand']}`\n"
+        f"**Bank:** `{bin_info['bank']}`\n"
+        f"**Country:** `{bin_info['country']}`\n"
+        "━━━━━━━━━━━━━━━━━━━"
+    )
+
+    update.message.reply_text(result, parse_mode="Markdown")
+
+# Help Command
+def help_command(update, context):
+    update.message.reply_text(
+        "📌 **BOT COMMANDS LIST** 📌\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
+        "🔹 `/bin <BIN>` - Check BIN information\n"
+        "🔹 `/gen <BIN>` - Generate fake credit cards\n"
+        "🔹 `/help` - View all commands\n"
+        "━━━━━━━━━━━━━━━━━━━\n"
+        "👨‍💻 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**\n"
+        "━━━━━━━━━━━━━━━━━━━",
+        parse_mode="Markdown"
+    )
 
 # Bot Setup
 def main():
     updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    dp.add_handler(CommandHandler("start", start))  
+    dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CommandHandler("bin", bin_lookup))
+    dp.add_handler(CommandHandler("gen", generate_cc))
+    dp.add_handler(CommandHandler("help", help_command))
 
     updater.start_polling()
     updater.idle()
