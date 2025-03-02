@@ -1,5 +1,4 @@
-
- import random
+import random
 import requests
 from telegram import Update
 from telegram.ext import Updater, CommandHandler, CallbackContext
@@ -8,18 +7,17 @@ from telegram.ext import Updater, CommandHandler, CallbackContext
 BOT_TOKEN = "7883008864:AAH_u7musCwKNR_Jj6fLuXmnkXame-1fvhw"
 CHANNEL_LINK = "https://t.me/+h3tJX-Wf2OM2MTk9"
 
-# 🔵 API Key (API Ninjas ke liye)
-API_KEY = "UxLV+6aaRVASi/mOhJbmbQ==jdE1rvg3L7ufKzBA"  # 🔗 Get it from https://api-ninjas.com/register
 
 # 📌 Start Command
 def start(update: Update, context: CallbackContext) -> None:
     welcome_message = (
-        "🤖 **Bot Status: Active ✅**\n\n"
-        f"📢 **For announcements and updates, join us 👉 [here]({CHANNEL_LINK}).**\n\n"
-        "💡 **Tip:** To use Astra in your group, make sure to set it as an admin.\n"
-        "🔍 **Commands:** Use `/help`"
-    )
-    update.message.reply_text(welcome_message, parse_mode="Markdown")
+    "🤖 **Bot Status: Active ✅**\n\n"
+    "📢 **For announcements and updates, join us 👉 [here](https://t.me/your_channel_link)**\n\n"
+    "💡 **Tip:** To use Astra in your group, make sure to set it as an admin.\n"
+    "🔍 **Commands:** Use `/help`"
+)
+update.message.reply_text(welcome_message, parse_mode="Markdown")
+
 
 # 📌 Help Command
 def help_command(update: Update, context: CallbackContext) -> None:
@@ -31,11 +29,12 @@ def help_command(update: Update, context: CallbackContext) -> None:
         "✅ `/fake <Country>` - Generate a real-looking fake address.\n"
         "✅ `/help` - Show this command list.\n"
         "━━━━━━━━━━━━━━━━━━━\n"
-        f"👨‍💻 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️](https://t.me/AsTra032)**"
+        f"👨‍💻 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨]()**"
     )
     update.message.reply_text(help_text, parse_mode="Markdown")
 
 # 📌 BIN Checker
+# BIN Checker
 def bin_lookup(update: Update, context: CallbackContext) -> None:
     if len(context.args) != 1:
         update.message.reply_text("❌ Usage: /bin <BIN>")
@@ -51,6 +50,8 @@ def bin_lookup(update: Update, context: CallbackContext) -> None:
         flag = data.get("country", {}).get("emoji", "🏳")
         phone = data.get("bank", {}).get("phone", "N/A")
         website = data.get("bank", {}).get("url", "N/A")
+        latitude = data.get("country", {}).get("latitude", "N/A")
+        longitude = data.get("country", {}).get("longitude", "N/A")
         scheme = data.get("scheme", "Unknown").upper()
         card_type = data.get("type", "Unknown").upper()
         brand = data.get("brand", "Unknown").upper()
@@ -65,16 +66,20 @@ def bin_lookup(update: Update, context: CallbackContext) -> None:
             f"📞 **Phone:** `{phone}`\n"
             f"🌍 **Country:** `{country} {flag}`\n"
             f"🌐 **Bank Website:** `{website}`\n"
-            f"🎟 **Card Scheme:** `{scheme}`\n"
+            f"📍 **Latitude:** `{latitude}`\n"
+            f"📍 **Longitude:** `{longitude}`\n"
             f"🛄 **Card Type:** `{card_type}`\n"
+            f"🛑 **Card Brand:** `{brand}`\n"
+            f"🎟 **Card Scheme:** `{scheme}`\n"
             f"💳 **Prepaid:** `{prepaid}`\n"
-            "━━━━━━━━━━━━━━━━━━━"
+            "━━━━━━━━━━━━━━━━━━━\n"
+            f"👨‍💻 **Developed by [Δ𝗦𝗧Ɍ𝗔™ 👁️‍🗨️]()**"
         )
     else:
-        result = "❌ Invalid BIN or API error."
+        result = "❌ Invalid BIN or API error. Try again later."
 
     update.message.reply_text(result, parse_mode="Markdown")
-
+    
 # 📌 Credit Card Generator
 def generate_cards(update: Update, context: CallbackContext) -> None:
     if len(context.args) != 1:
@@ -130,24 +135,24 @@ COUNTRY_CODES = {
     "Germany": "+49",
 }
 
-# 📌 Fake Address Generator (Using API)
+# 📌 Fake Address Generator (Using RandomUser API)
 def fake_address(update: Update, context: CallbackContext) -> None:
-    url = "https://api.api-ninjas.com/v1/randomaddress"
-    headers = {"X-Api-Key": API_KEY}
+    url = "https://randomuser.me/api/"
     
-    response = requests.get(url, headers=headers)
+    response = requests.get(url)
     
     if response.status_code == 200:
-        data = response.json()
-        street = data.get("address", "Unknown Street")
-        city = data.get("city", "Unknown City")
-        state = data.get("state", "Unknown State")
-        zip_code = data.get("zip", "Unknown ZIP")
-        country = data.get("country", "Unknown Country")
+        data = response.json()['results'][0]
+        
+        street = f"{data['location']['street']['number']} {data['location']['street']['name']}"
+        city = data['location']['city']
+        state = data['location']['state']
+        zip_code = data['location']['postcode']
+        country = data['location']['country']
         
         # Correct phone number format for country
         phone_code = COUNTRY_CODES.get(country, "+999")
-        phone = f"{phone_code} {requests.get('https://randomuser.me/api/').json()['results'][0]['phone']}"
+        phone = f"{phone_code} {data['phone']}"
 
         result = (
             "📍 **Generated Fake Address:**\n"
